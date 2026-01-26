@@ -30,8 +30,9 @@
   1. There should be two standard branches. Main and Development. Initial version should go into Main, then subsequent work goes into the development branch until the development branch is promoted to Main.
   2. Create an **experimental pre-release** from the development branch
   3. Use version format: `x.y.z-beta.n` (e.g., `0.4.0-beta.1`) for experimental releases
-  4. The experimental release must be installable via HACS
-  5. Tag experimental releases with `pre-release` flag on GitHub
+  4. All commits and releases need to by synced to github for testing.
+  5. The experimental release must be installable via HACS
+  6. Tag experimental releases with `pre-release` flag on GitHub
 - After user confirms the experimental release works:
   1. Merge development branch into main
   2. Create a normal release from main with standard version (e.g., `0.4.0`)
