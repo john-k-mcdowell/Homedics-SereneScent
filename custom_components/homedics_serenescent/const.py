@@ -12,7 +12,7 @@ PLATFORMS = [Platform.FAN, Platform.LIGHT, Platform.SWITCH, Platform.SENSOR]
 CONF_MAC_ADDRESS = "mac_address"
 
 # Device names that we look for during discovery
-DEVICE_NAME_PREFIX = "ARPRP-"  # Actual device advertises as ARPRP-xxx
+DEVICE_NAME_PREFIX = "ARMH-"  # Actual device advertises as ARPRP-xxx
 
 # Update interval
 DEFAULT_SCAN_INTERVAL = 30  # seconds
