@@ -9,7 +9,6 @@ import logging
 from typing import Any
 
 from homeassistant.components.light import (
-    ColorMode,
     LightEntity,
     LightEntityFeature,
 )
@@ -51,8 +50,6 @@ class HomedicsSereneScentLight(
     _attr_has_entity_name = True
     _attr_name = "Light"
     _attr_icon = "mdi:lightbulb"
-    _attr_color_mode = ColorMode.ONOFF
-    _attr_supported_color_modes = {ColorMode.ONOFF}
     _attr_supported_features = LightEntityFeature.EFFECT
     _attr_effect_list = EFFECT_LIST
 

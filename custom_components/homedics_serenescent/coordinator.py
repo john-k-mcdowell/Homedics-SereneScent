@@ -46,9 +46,6 @@ from .const import (
     INTENSITY_COMMANDS,
     INTENSITY_MAP,
     RESP_HEADER,
-    SENSOR_COLOR,
-    SENSOR_INTENSITY,
-    SENSOR_SCHEDULE,
     STATUS_BYTE_COLOR,
     STATUS_BYTE_INTENSITY,
     STATUS_BYTE_MODE,
@@ -374,9 +371,9 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Build data dictionary for entities."""
         return {
             "power": self._is_on,
-            SENSOR_INTENSITY: self._intensity,
-            SENSOR_COLOR: self._color,
-            SENSOR_SCHEDULE: self._schedule_on,
+            "intensity": self._intensity,
+            "color": self._color,
+            "schedule": self._schedule_on,
         }
 
     async def _async_update_data(self) -> dict[str, Any]:

@@ -6,7 +6,7 @@ DOMAIN = "homedics_serenescent"
 NAME = "Homedics SereneScent"
 
 # Platforms
-PLATFORMS = [Platform.FAN, Platform.LIGHT, Platform.SWITCH, Platform.SENSOR]
+PLATFORMS = [Platform.FAN, Platform.LIGHT, Platform.SWITCH]
 
 # Configuration
 CONF_MAC_ADDRESS = "mac_address"
@@ -130,8 +130,5 @@ COLOR_COMMANDS = {
 }
 
 # Entity keys
-SENSOR_INTENSITY = "intensity"
-SENSOR_COLOR = "color"
-SENSOR_SCHEDULE = "schedule"
 SWITCH_SCHEDULE = "schedule"
 SWITCH_MONITORING = "monitoring"
