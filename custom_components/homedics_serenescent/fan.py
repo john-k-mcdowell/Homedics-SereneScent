@@ -47,7 +47,11 @@ class HomedicsSereneScentFan(
     _attr_has_entity_name = True
     _attr_name = "Diffuser"
     _attr_icon = "mdi:air-humidifier"
-    _attr_supported_features = FanEntityFeature.PRESET_MODE
+    _attr_supported_features = (
+        FanEntityFeature.PRESET_MODE
+        | FanEntityFeature.TURN_ON
+        | FanEntityFeature.TURN_OFF
+    )
     _attr_preset_modes = PRESET_MODES
 
     def __init__(self, coordinator: HomedicsSereneScentCoordinator) -> None:

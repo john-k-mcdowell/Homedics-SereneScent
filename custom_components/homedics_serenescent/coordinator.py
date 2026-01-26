@@ -306,8 +306,9 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self._send_command(cmd)
         self._is_on = on
 
-        # Request status to confirm
+        # Request status to confirm, then disconnect
         await self.async_request_status()
+        await self._disconnect()
         self.async_set_updated_data(self._build_data_dict())
 
     async def async_set_intensity(self, intensity: str) -> None:
@@ -325,6 +326,7 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._intensity = intensity
 
         await self.async_request_status()
+        await self._disconnect()
         self.async_set_updated_data(self._build_data_dict())
 
     async def async_set_color(self, color: str) -> None:
@@ -342,6 +344,7 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._color = color
 
         await self.async_request_status()
+        await self._disconnect()
         self.async_set_updated_data(self._build_data_dict())
 
     async def async_set_schedule(self, on: bool) -> None:
@@ -365,6 +368,7 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._schedule_on = on
 
         await self.async_request_status()
+        await self._disconnect()
         self.async_set_updated_data(self._build_data_dict())
 
     def _build_data_dict(self) -> dict[str, Any]:
@@ -380,10 +384,14 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch data from device."""
         try:
             await self.async_request_status()
+            # Disconnect immediately after polling to free the device for other apps
+            await self._disconnect()
             return self._build_data_dict()
         except BleakError as err:
+            await self._disconnect()
             raise UpdateFailed(f"BLE error: {err}") from err
         except Exception as err:
+            await self._disconnect()
             raise UpdateFailed(f"Error: {err}") from err
 
     async def _monitor_connection_health(self) -> None:
