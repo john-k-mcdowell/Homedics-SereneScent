@@ -104,8 +104,10 @@ class HomedicsSereneScentConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     def _is_homedics_device(name: str | None) -> bool:
-        """Check if device name matches Homedics SereneScent pattern."""
+        """Check if device name matches Homedics SereneScent pattern.
+
+        Device advertises as 'ARPRP-xxx' where xxx is device-specific.
+        """
         if name is None:
             return False
-        # TODO: Update with actual device name pattern
         return name.startswith(DEVICE_NAME_PREFIX)

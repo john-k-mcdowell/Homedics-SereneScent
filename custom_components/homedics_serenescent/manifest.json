@@ -3,15 +3,15 @@
   "name": "Homedics SereneScent",
   "codeowners": ["@john-k-mcdowell"],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": ["bluetooth"],
   "documentation": "https://github.com/john-k-mcdowell/Homedics-SereneScent",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/john-k-mcdowell/Homedics-SereneScent/issues",
-  "requirements": ["bleak-retry-connector>=3.5.0"],
-  "version": "0.1.0",
+  "requirements": ["bleak>=0.21.0", "bleak-retry-connector>=3.5.0"],
+  "version": "0.2.0",
   "bluetooth": [
     {
-      "local_name": "SereneScent*"
+      "local_name": "ARPRP-*"
     }
   ]
 }

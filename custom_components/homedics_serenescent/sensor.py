@@ -1,23 +1,19 @@
-"""Sensor platform for Homedics SereneScent integration."""
+"""Sensor platform for Homedics SereneScent integration.
+
+Provides read-only sensors for device state (intensity, color).
+"""
 
 from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorStateClass,
-)
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import (
-    DOMAIN,
-    SENSOR_STATUS,
-)
+from .const import DOMAIN, SENSOR_COLOR, SENSOR_INTENSITY
 from .coordinator import HomedicsSereneScentCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,15 +29,15 @@ async def async_setup_entry(
         config_entry.entry_id
     ]
 
-    sensors = [
-        # TODO: Add sensor entities based on device capabilities
-        HomedicsSereneScentStatusSensor(coordinator),
-    ]
-
-    async_add_entities(sensors)
+    async_add_entities([
+        HomedicsSereneScentIntensitySensor(coordinator),
+        HomedicsSereneScentColorSensor(coordinator),
+    ])
 
 
-class HomedicsSereneScentSensor(CoordinatorEntity[HomedicsSereneScentCoordinator], SensorEntity):
+class HomedicsSereneScentBaseSensor(
+    CoordinatorEntity[HomedicsSereneScentCoordinator], SensorEntity
+):
     """Base class for Homedics SereneScent sensors."""
 
     _attr_has_entity_name = True
@@ -64,17 +60,33 @@ class HomedicsSereneScentSensor(CoordinatorEntity[HomedicsSereneScentCoordinator
         )
 
 
-class HomedicsSereneScentStatusSensor(HomedicsSereneScentSensor):
-    """Status sensor for Homedics SereneScent."""
+class HomedicsSereneScentIntensitySensor(HomedicsSereneScentBaseSensor):
+    """Intensity sensor for Homedics SereneScent."""
 
-    _attr_icon = "mdi:air-filter"
+    _attr_name = "Intensity"
+    _attr_icon = "mdi:speedometer"
 
     def __init__(self, coordinator: HomedicsSereneScentCoordinator) -> None:
-        """Initialize status sensor."""
-        super().__init__(coordinator, SENSOR_STATUS)
-        self._attr_name = "Status"
+        """Initialize intensity sensor."""
+        super().__init__(coordinator, SENSOR_INTENSITY)
 
     @property
     def native_value(self) -> str | None:
-        """Return the status value."""
-        return self.coordinator.data.get(self._sensor_type)
+        """Return the intensity level."""
+        return self.coordinator.intensity.capitalize()
+
+
+class HomedicsSereneScentColorSensor(HomedicsSereneScentBaseSensor):
+    """Color sensor for Homedics SereneScent."""
+
+    _attr_name = "Color"
+    _attr_icon = "mdi:palette"
+
+    def __init__(self, coordinator: HomedicsSereneScentCoordinator) -> None:
+        """Initialize color sensor."""
+        super().__init__(coordinator, SENSOR_COLOR)
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the current color."""
+        return self.coordinator.color.capitalize()
