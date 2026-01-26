@@ -295,12 +295,17 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._current_mode,
         )
 
-    async def async_request_status(self) -> None:
-        """Request current status from device."""
+    async def async_request_status(self) -> bool:
+        """Request current status from device.
+
+        Returns True if a valid status response was received.
+        """
         cmd = CMD_STATUS_SCHEDULE if self._current_mode == 1 else CMD_STATUS_HOME
         response = await self._send_command(cmd)
         if response:
             self._parse_status_response(response)
+            return True
+        return False
 
     async def async_set_power(self, on: bool) -> None:
         """Turn device on or off."""
@@ -313,9 +318,20 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             cmd = CMD_POWER_ON if on else CMD_POWER_OFF
             await self._send_command(cmd)
 
-            # Request status to confirm - state is updated by _parse_status_response
-            await self.async_request_status()
+            # Request status to confirm
+            status_ok = await self.async_request_status()
             await self._disconnect()
+
+            # Verify we got a response and state changed
+            if not status_ok:
+                raise HomeAssistantError(
+                    "No response from device - may be in use by another app"
+                )
+            if self._is_on != on:
+                raise HomeAssistantError(
+                    "Command failed - device state did not change"
+                )
+
             self.async_set_updated_data(self._build_data_dict())
         except (BleakError, HomeAssistantError) as err:
             await self._disconnect()
@@ -336,9 +352,20 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             await self._send_command(INTENSITY_COMMANDS[intensity])
 
-            # Request status to confirm - state is updated by _parse_status_response
-            await self.async_request_status()
+            # Request status to confirm
+            status_ok = await self.async_request_status()
             await self._disconnect()
+
+            # Verify we got a response and state changed
+            if not status_ok:
+                raise HomeAssistantError(
+                    "No response from device - may be in use by another app"
+                )
+            if self._intensity != intensity:
+                raise HomeAssistantError(
+                    "Command failed - device state did not change"
+                )
+
             self.async_set_updated_data(self._build_data_dict())
         except (BleakError, HomeAssistantError) as err:
             await self._disconnect()
@@ -359,9 +386,20 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             await self._send_command(COLOR_COMMANDS[color])
 
-            # Request status to confirm - state is updated by _parse_status_response
-            await self.async_request_status()
+            # Request status to confirm
+            status_ok = await self.async_request_status()
             await self._disconnect()
+
+            # Verify we got a response and state changed
+            if not status_ok:
+                raise HomeAssistantError(
+                    "No response from device - may be in use by another app"
+                )
+            if self._color != color:
+                raise HomeAssistantError(
+                    "Command failed - device state did not change"
+                )
+
             self.async_set_updated_data(self._build_data_dict())
         except (BleakError, HomeAssistantError) as err:
             await self._disconnect()
@@ -387,9 +425,20 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 # Schedule OFF is simpler
                 await self._send_command(CMD_SCHEDULE_OFF)
 
-            # Request status to confirm - state is updated by _parse_status_response
-            await self.async_request_status()
+            # Request status to confirm
+            status_ok = await self.async_request_status()
             await self._disconnect()
+
+            # Verify we got a response and state changed
+            if not status_ok:
+                raise HomeAssistantError(
+                    "No response from device - may be in use by another app"
+                )
+            if self._schedule_on != on:
+                raise HomeAssistantError(
+                    "Command failed - device state did not change"
+                )
+
             self.async_set_updated_data(self._build_data_dict())
         except (BleakError, HomeAssistantError) as err:
             await self._disconnect()
