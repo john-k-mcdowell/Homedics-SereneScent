@@ -17,6 +17,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -201,8 +202,14 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     if attempt < CONNECTION_MAX_ATTEMPTS - 1:
                         await asyncio.sleep(self._connect_delay)
 
-            raise UpdateFailed(
-                f"Failed to connect after {CONNECTION_MAX_ATTEMPTS} attempts: {last_error}"
+            _LOGGER.warning(
+                "Failed to connect to %s after %d attempts: %s (device may be in use by another app)",
+                self.address,
+                CONNECTION_MAX_ATTEMPTS,
+                last_error,
+            )
+            raise HomeAssistantError(
+                f"Cannot connect to device (may be in use by another app): {last_error}"
             )
 
     async def _disconnect(self) -> None:
@@ -297,19 +304,23 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_set_power(self, on: bool) -> None:
         """Turn device on or off."""
-        # Ensure HOME mode for power commands
-        if self._current_mode != 0:
-            await self._send_command(CMD_MODE_HOME, wait_response=False)
-            self._current_mode = 0
+        try:
+            # Ensure HOME mode for power commands
+            if self._current_mode != 0:
+                await self._send_command(CMD_MODE_HOME, wait_response=False)
+                self._current_mode = 0
 
-        cmd = CMD_POWER_ON if on else CMD_POWER_OFF
-        await self._send_command(cmd)
-        self._is_on = on
+            cmd = CMD_POWER_ON if on else CMD_POWER_OFF
+            await self._send_command(cmd)
 
-        # Request status to confirm, then disconnect
-        await self.async_request_status()
-        await self._disconnect()
-        self.async_set_updated_data(self._build_data_dict())
+            # Request status to confirm - state is updated by _parse_status_response
+            await self.async_request_status()
+            await self._disconnect()
+            self.async_set_updated_data(self._build_data_dict())
+        except (BleakError, HomeAssistantError) as err:
+            await self._disconnect()
+            _LOGGER.warning("Failed to set power: %s", err)
+            raise HomeAssistantError(f"Failed to set power: {err}") from err
 
     async def async_set_intensity(self, intensity: str) -> None:
         """Set diffuser intensity (low, medium, high)."""
@@ -317,17 +328,22 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.warning("Invalid intensity: %s", intensity)
             return
 
-        # Ensure HOME mode
-        if self._current_mode != 0:
-            await self._send_command(CMD_MODE_HOME, wait_response=False)
-            self._current_mode = 0
+        try:
+            # Ensure HOME mode
+            if self._current_mode != 0:
+                await self._send_command(CMD_MODE_HOME, wait_response=False)
+                self._current_mode = 0
 
-        await self._send_command(INTENSITY_COMMANDS[intensity])
-        self._intensity = intensity
+            await self._send_command(INTENSITY_COMMANDS[intensity])
 
-        await self.async_request_status()
-        await self._disconnect()
-        self.async_set_updated_data(self._build_data_dict())
+            # Request status to confirm - state is updated by _parse_status_response
+            await self.async_request_status()
+            await self._disconnect()
+            self.async_set_updated_data(self._build_data_dict())
+        except (BleakError, HomeAssistantError) as err:
+            await self._disconnect()
+            _LOGGER.warning("Failed to set intensity: %s", err)
+            raise HomeAssistantError(f"Failed to set intensity: {err}") from err
 
     async def async_set_color(self, color: str) -> None:
         """Set light color."""
@@ -335,41 +351,50 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.warning("Invalid color: %s", color)
             return
 
-        # Ensure HOME mode
-        if self._current_mode != 0:
-            await self._send_command(CMD_MODE_HOME, wait_response=False)
-            self._current_mode = 0
+        try:
+            # Ensure HOME mode
+            if self._current_mode != 0:
+                await self._send_command(CMD_MODE_HOME, wait_response=False)
+                self._current_mode = 0
 
-        await self._send_command(COLOR_COMMANDS[color])
-        self._color = color
+            await self._send_command(COLOR_COMMANDS[color])
 
-        await self.async_request_status()
-        await self._disconnect()
-        self.async_set_updated_data(self._build_data_dict())
+            # Request status to confirm - state is updated by _parse_status_response
+            await self.async_request_status()
+            await self._disconnect()
+            self.async_set_updated_data(self._build_data_dict())
+        except (BleakError, HomeAssistantError) as err:
+            await self._disconnect()
+            _LOGGER.warning("Failed to set color: %s", err)
+            raise HomeAssistantError(f"Failed to set color: {err}") from err
 
     async def async_set_schedule(self, on: bool) -> None:
         """Enable or disable schedule."""
-        # Ensure SCHEDULE mode
-        if self._current_mode != 1:
-            await self._send_command(CMD_MODE_SCHEDULE, wait_response=False)
-            await self._send_command(CMD_SCHEDULE_SYNC, wait_response=False)
-            self._current_mode = 1
+        try:
+            # Ensure SCHEDULE mode
+            if self._current_mode != 1:
+                await self._send_command(CMD_MODE_SCHEDULE, wait_response=False)
+                await self._send_command(CMD_SCHEDULE_SYNC, wait_response=False)
+                self._current_mode = 1
 
-        if on:
-            # Schedule ON requires 4-command sequence
-            await self._send_command(CMD_SCHEDULE_ON, wait_response=False)
-            await self._send_command(CMD_SETTINGS_SYNC, wait_response=False)
-            await self._send_command(CMD_SCHEDULE_UNKNOWN1, wait_response=False)
-            await self._send_command(CMD_SCHEDULE_UNKNOWN2, wait_response=False)
-        else:
-            # Schedule OFF is simpler
-            await self._send_command(CMD_SCHEDULE_OFF)
+            if on:
+                # Schedule ON requires 4-command sequence
+                await self._send_command(CMD_SCHEDULE_ON, wait_response=False)
+                await self._send_command(CMD_SETTINGS_SYNC, wait_response=False)
+                await self._send_command(CMD_SCHEDULE_UNKNOWN1, wait_response=False)
+                await self._send_command(CMD_SCHEDULE_UNKNOWN2, wait_response=False)
+            else:
+                # Schedule OFF is simpler
+                await self._send_command(CMD_SCHEDULE_OFF)
 
-        self._schedule_on = on
-
-        await self.async_request_status()
-        await self._disconnect()
-        self.async_set_updated_data(self._build_data_dict())
+            # Request status to confirm - state is updated by _parse_status_response
+            await self.async_request_status()
+            await self._disconnect()
+            self.async_set_updated_data(self._build_data_dict())
+        except (BleakError, HomeAssistantError) as err:
+            await self._disconnect()
+            _LOGGER.warning("Failed to set schedule: %s", err)
+            raise HomeAssistantError(f"Failed to set schedule: {err}") from err
 
     def _build_data_dict(self) -> dict[str, Any]:
         """Build data dictionary for entities."""
@@ -387,11 +412,17 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Disconnect immediately after polling to free the device for other apps
             await self._disconnect()
             return self._build_data_dict()
+        except HomeAssistantError as err:
+            await self._disconnect()
+            # Don't log again - already logged in _ensure_connected
+            raise UpdateFailed(str(err)) from err
         except BleakError as err:
             await self._disconnect()
+            _LOGGER.debug("BLE error during status update: %s", err)
             raise UpdateFailed(f"BLE error: {err}") from err
         except Exception as err:
             await self._disconnect()
+            _LOGGER.warning("Unexpected error during status update: %s", err)
             raise UpdateFailed(f"Error: {err}") from err
 
     async def _monitor_connection_health(self) -> None:
