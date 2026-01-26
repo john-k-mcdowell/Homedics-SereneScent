@@ -27,8 +27,10 @@ from .coordinator import HomedicsSereneScentCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-# Only rotating is an effect (it's a behavior, not a static color)
-EFFECT_LIST = ["rotating"]
+# Effects available
+# - "solid": static color (uses current/last selected color)
+# - "rotating": cycles through all colors
+EFFECT_LIST = ["solid", "rotating"]
 
 # Saturation threshold below which we consider the color to be white
 WHITE_SATURATION_THRESHOLD = 25
@@ -130,16 +132,22 @@ class HomedicsSereneScentLight(
 
     @property
     def available(self) -> bool:
-        """Return if entity is available."""
-        return (
-            self.coordinator.monitoring_enabled
-            and self.coordinator.last_update_success
-        )
+        """Return if entity is available.
+
+        Always available when monitoring is enabled, even if device hasn't
+        responded yet. This allows users to attempt control when device is off.
+        """
+        return self.coordinator.monitoring_enabled
 
     @property
     def is_on(self) -> bool:
         """Return True if light is on (not 'off' color)."""
         return self.coordinator.color != "off"
+
+    @property
+    def brightness(self) -> int:
+        """Return brightness (always 255 as device has no intensity control for light)."""
+        return 255
 
     @property
     def hs_color(self) -> tuple[float, float] | None:
@@ -151,17 +159,26 @@ class HomedicsSereneScentLight(
 
     @property
     def effect(self) -> str | None:
-        """Return the current effect (only 'rotating' or None)."""
-        if self.coordinator.color == "rotating":
+        """Return the current effect ('solid' or 'rotating')."""
+        color = self.coordinator.color
+        if color == "rotating":
             return "rotating"
+        if color != "off":
+            return "solid"
         return None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the light."""
-        # Check for effect first (rotating)
+        # Check for effect
         effect = kwargs.get("effect")
         if effect == "rotating":
             await self.coordinator.async_set_color("rotating")
+            return
+        if effect == "solid":
+            # If currently rotating or off, switch to last solid color (default white)
+            if self.coordinator.color in ("rotating", "off"):
+                await self.coordinator.async_set_color("white")
+            # Otherwise keep current color (already solid)
             return
 
         # Check for color from color wheel
@@ -177,6 +194,8 @@ class HomedicsSereneScentLight(
             )
             await self.coordinator.async_set_color(closest_color)
             return
+
+        # Brightness is ignored (device doesn't support light intensity)
 
         # No color specified - if currently off, default to white
         if self.coordinator.color == "off":

@@ -76,11 +76,12 @@ class HomedicsSereneScentFan(
 
     @property
     def available(self) -> bool:
-        """Return if entity is available."""
-        return (
-            self.coordinator.monitoring_enabled
-            and self.coordinator.last_update_success
-        )
+        """Return if entity is available.
+
+        Always available when monitoring is enabled, even if device hasn't
+        responded yet. This allows users to attempt control when device is off.
+        """
+        return self.coordinator.monitoring_enabled
 
     @property
     def is_on(self) -> bool:

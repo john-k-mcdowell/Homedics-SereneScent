@@ -1,3 +1,3 @@
 """Version information for Homedics SereneScent integration."""
 
-VERSION = "0.2.0-beta.9"
+VERSION = "0.2.0-beta.10"

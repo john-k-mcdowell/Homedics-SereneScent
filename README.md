@@ -19,11 +19,11 @@ This integration communicates with the diffuser over Bluetooth Low Energy (BLE) 
 
 ## Supported Devices
 
-| Model | Firmware | Status |
-|-------|----------|--------|
+| Model    | Firmware                | Status |
+| -------- | ----------------------- | ------ |
 | ARMH-973 | BEKEN BK-BLE-1.0 v6.1.2 | Tested |
 
-The device advertises via Bluetooth as `ARPRP-xxx` where `xxx` is device-specific.
+The device advertises via Bluetooth as `ARMH-xxx` where `xxx` is device-specific.
 
 ## Requirements
 
@@ -75,31 +75,31 @@ Once installed, Home Assistant will automatically discover SereneScent devices w
 The integration creates the following entities for each device:
 
 ### Fan
-| Entity | Description |
-|--------|-------------|
+| Entity                     | Description                               |
+| -------------------------- | ----------------------------------------- |
 | `fan.serenescent_diffuser` | Main power control with intensity presets |
 
 **Preset Modes:** `low`, `medium`, `high`
 
 ### Light
-| Entity | Description |
-|--------|-------------|
+| Entity                    | Description                |
+| ------------------------- | -------------------------- |
 | `light.serenescent_light` | LED light with color wheel |
 
 The light entity displays a color wheel for color selection. Since the device only supports 6 fixed colors (white, red, blue, violet, green, orange), the integration will automatically match your selected color to the closest available device color.
 
-**Effect:** `rotating` (cycles through all colors)
+**Effects:** `solid` (static color), `rotating` (cycles through all colors)
 
 ### Switch
-| Entity | Description |
-|--------|-------------|
+| Entity                        | Description                            |
+| ----------------------------- | -------------------------------------- |
 | `switch.serenescent_schedule` | Toggle device's built-in schedule mode |
 
 ### Sensor
-| Entity | Description |
-|--------|-------------|
+| Entity                         | Description             |
+| ------------------------------ | ----------------------- |
 | `sensor.serenescent_intensity` | Current intensity level |
-| `sensor.serenescent_color` | Current light color |
+| `sensor.serenescent_color`     | Current light color     |
 
 ## Example Automations
 
@@ -189,16 +189,6 @@ custom_components/homedics_serenescent/
 │   └── en.json
 └── version.py           # Version info
 ```
-
-### Tools
-
-The `tools/` directory contains Python scripts used for protocol reverse engineering:
-
-- `ble_discover.py` - Enumerate device services/characteristics
-- `ble_command_test.py` - Test command patterns
-- `ble_protocol_test.py` - Test known protocol patterns
-- `ble_state_compare.py` - Compare device state before/after changes
-- `ble_verified_test.py` - Test verified commands
 
 ## Contributing
 
