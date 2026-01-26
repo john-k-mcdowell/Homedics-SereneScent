@@ -130,6 +130,29 @@ COLOR_COMMANDS = {
     "orange": CMD_COLOR_ORANGE,
 }
 
+# RGB values for device colors (used for color matching from color wheel)
+COLOR_RGB_MAP = {
+    "white": (255, 255, 255),
+    "red": (255, 0, 0),
+    "orange": (255, 165, 0),
+    "green": (0, 255, 0),
+    "blue": (0, 0, 255),
+    "violet": (148, 0, 211),
+}
+
+# HS (hue, saturation) values for device colors (used for reporting current color)
+# Hue is 0-360, Saturation is 0-100
+COLOR_HS_MAP = {
+    "white": (0, 0),
+    "red": (0, 100),
+    "orange": (39, 100),
+    "green": (120, 100),
+    "blue": (240, 100),
+    "violet": (282, 100),
+    "off": (0, 0),
+    "rotating": (0, 0),  # No fixed color for rotating
+}
+
 # Entity keys
 SWITCH_SCHEDULE = "schedule"
 SWITCH_MONITORING = "monitoring"

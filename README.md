@@ -12,7 +12,7 @@ This integration communicates with the diffuser over Bluetooth Low Energy (BLE) 
 
 - **Power Control** - Turn the diffuser on/off
 - **Intensity Control** - Set mist intensity (Low, Medium, High)
-- **Light Control** - Change LED colors (White, Red, Blue, Violet, Green, Orange, Rotating)
+- **Light Control** - Color wheel interface that maps to closest device color (White, Red, Blue, Violet, Green, Orange) plus rotating effect
 - **Schedule Control** - Enable/disable the device's built-in schedule mode
 - **Auto Discovery** - Automatically discovers SereneScent devices via Bluetooth
 - **Multi-Device Support** - Configure multiple diffusers independently
@@ -84,9 +84,11 @@ The integration creates the following entities for each device:
 ### Light
 | Entity | Description |
 |--------|-------------|
-| `light.serenescent_light` | LED light with color effects |
+| `light.serenescent_light` | LED light with color wheel |
 
-**Effects:** `white`, `red`, `blue`, `violet`, `green`, `orange`, `rotating`
+The light entity displays a color wheel for color selection. Since the device only supports 6 fixed colors (white, red, blue, violet, green, orange), the integration will automatically match your selected color to the closest available device color.
+
+**Effect:** `rotating` (cycles through all colors)
 
 ### Switch
 | Entity | Description |
@@ -119,7 +121,7 @@ automation:
         target:
           entity_id: light.serenescent_light
         data:
-          effect: blue
+          hs_color: [240, 100]  # Blue (hue 240°, saturation 100%)
 ```
 
 ### Turn off diffuser at bedtime

@@ -1,11 +1,15 @@
 """Light platform for Homedics SereneScent integration.
 
-Provides color control using effect presets (white, red, blue, violet, green, orange, rotating).
+Provides color control using a color wheel (HS mode) that maps to the closest
+available device color (white, red, blue, violet, green, orange).
+The "rotating" color cycle is available as an effect.
 """
 
 from __future__ import annotations
 
+import colorsys
 import logging
+import math
 from typing import Any
 
 from homeassistant.components.light import (
@@ -18,13 +22,74 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import COLOR_MAP, DOMAIN
+from .const import COLOR_HS_MAP, COLOR_RGB_MAP, DOMAIN
 from .coordinator import HomedicsSereneScentCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-# Available color effects (excluding 'off')
-EFFECT_LIST = ["white", "red", "blue", "violet", "green", "orange", "rotating"]
+# Only rotating is an effect (it's a behavior, not a static color)
+EFFECT_LIST = ["rotating"]
+
+# Saturation threshold below which we consider the color to be white
+WHITE_SATURATION_THRESHOLD = 25
+
+
+def _hs_to_rgb(hue: float, saturation: float) -> tuple[int, int, int]:
+    """Convert HS color to RGB.
+
+    Args:
+        hue: Hue value 0-360
+        saturation: Saturation value 0-100
+
+    Returns:
+        RGB tuple with values 0-255
+    """
+    # colorsys uses 0-1 range
+    h = hue / 360.0
+    s = saturation / 100.0
+    r, g, b = colorsys.hsv_to_rgb(h, s, 1.0)
+    return (int(r * 255), int(g * 255), int(b * 255))
+
+
+def _color_distance(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> float:
+    """Calculate Euclidean distance between two RGB colors."""
+    return math.sqrt(
+        (rgb1[0] - rgb2[0]) ** 2
+        + (rgb1[1] - rgb2[1]) ** 2
+        + (rgb1[2] - rgb2[2]) ** 2
+    )
+
+
+def _find_closest_color(hue: float, saturation: float) -> str:
+    """Find the closest device color to the given HS values.
+
+    Args:
+        hue: Hue value 0-360
+        saturation: Saturation value 0-100
+
+    Returns:
+        Device color name (white, red, orange, green, blue, violet)
+    """
+    # Low saturation means white
+    if saturation < WHITE_SATURATION_THRESHOLD:
+        return "white"
+
+    # Convert input HS to RGB
+    input_rgb = _hs_to_rgb(hue, saturation)
+
+    # Find closest color by RGB distance
+    closest_color = "white"
+    min_distance = float("inf")
+
+    for color_name, color_rgb in COLOR_RGB_MAP.items():
+        if color_name == "white":
+            continue  # Skip white, already handled by saturation check
+        distance = _color_distance(input_rgb, color_rgb)
+        if distance < min_distance:
+            min_distance = distance
+            closest_color = color_name
+
+    return closest_color
 
 
 async def async_setup_entry(
@@ -45,14 +110,15 @@ class HomedicsSereneScentLight(
 ):
     """Light entity for Homedics SereneScent diffuser.
 
-    Controls the LED light with color presets via effects.
+    Controls the LED light with a color wheel interface.
+    Colors are mapped to the closest available device color.
     """
 
     _attr_has_entity_name = True
     _attr_name = "Light"
     _attr_icon = "mdi:lightbulb"
-    _attr_supported_color_modes = {ColorMode.ONOFF}
-    _attr_color_mode = ColorMode.ONOFF
+    _attr_supported_color_modes = {ColorMode.HS}
+    _attr_color_mode = ColorMode.HS
     _attr_supported_features = LightEntityFeature.EFFECT
     _attr_effect_list = EFFECT_LIST
 
@@ -76,21 +142,44 @@ class HomedicsSereneScentLight(
         return self.coordinator.color != "off"
 
     @property
-    def effect(self) -> str | None:
-        """Return the current color effect."""
+    def hs_color(self) -> tuple[float, float] | None:
+        """Return the current color as HS values."""
         color = self.coordinator.color
-        if color in EFFECT_LIST:
-            return color
+        if color in COLOR_HS_MAP:
+            return COLOR_HS_MAP[color]
+        return None
+
+    @property
+    def effect(self) -> str | None:
+        """Return the current effect (only 'rotating' or None)."""
+        if self.coordinator.color == "rotating":
+            return "rotating"
         return None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the light."""
+        # Check for effect first (rotating)
         effect = kwargs.get("effect")
+        if effect == "rotating":
+            await self.coordinator.async_set_color("rotating")
+            return
 
-        if effect and effect in EFFECT_LIST:
-            await self.coordinator.async_set_color(effect)
-        elif self.coordinator.color == "off":
-            # Default to white when turning on from off
+        # Check for color from color wheel
+        hs_color = kwargs.get("hs_color")
+        if hs_color is not None:
+            hue, saturation = hs_color
+            closest_color = _find_closest_color(hue, saturation)
+            _LOGGER.debug(
+                "Color wheel input HS(%s, %s) mapped to device color: %s",
+                hue,
+                saturation,
+                closest_color,
+            )
+            await self.coordinator.async_set_color(closest_color)
+            return
+
+        # No color specified - if currently off, default to white
+        if self.coordinator.color == "off":
             await self.coordinator.async_set_color("white")
 
     async def async_turn_off(self, **kwargs: Any) -> None:
