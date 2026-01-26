@@ -2,15 +2,15 @@
   "config": {
     "step": {
       "user": {
-        "title": "Homedics SereneScent",
-        "description": "Select your Homedics SereneScent device",
+        "title": "Select SereneScent Device",
+        "description": "Found {count} SereneScent device(s). Select the one you want to configure.",
         "data": {
-          "mac_address": "Device"
+          "address": "Device"
         }
       },
       "bluetooth_confirm": {
-        "title": "Confirm Homedics SereneScent",
-        "description": "Do you want to set up {name}?"
+        "title": "Confirm SereneScent Device",
+        "description": "Do you want to set up {name} ({address})?"
       }
     },
     "error": {
@@ -19,7 +19,7 @@
     },
     "abort": {
       "already_configured": "Device is already configured",
-      "no_devices_found": "No Homedics SereneScent devices found"
+      "no_devices_found": "No Homedics SereneScent devices found. Make sure your device is powered on and in range."
     }
   },
   "options": {
