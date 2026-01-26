@@ -42,6 +42,7 @@ from .const import (
     CONNECTION_IDLE_TIMEOUT,
     CONNECTION_MAX_ATTEMPTS,
     CONNECTION_MAX_DELAY,
+    CONNECTION_TIMEOUT,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     INTENSITY_COMMANDS,
@@ -159,14 +160,17 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for attempt in range(CONNECTION_MAX_ATTEMPTS):
                 try:
                     _LOGGER.debug(
-                        "Connecting to %s (attempt %d/%d)",
+                        "Connecting to %s (attempt %d/%d, timeout=%ds)",
                         self.address,
                         attempt + 1,
                         CONNECTION_MAX_ATTEMPTS,
+                        int(CONNECTION_TIMEOUT),
                     )
 
-                    self._client = await establish_connection(
-                        BleakClient, ble_device, self.address
+                    # Wrap connection with timeout to fail fast if device is busy
+                    self._client = await asyncio.wait_for(
+                        establish_connection(BleakClient, ble_device, self.address),
+                        timeout=CONNECTION_TIMEOUT,
                     )
 
                     # Subscribe to notifications
@@ -188,28 +192,39 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     _LOGGER.debug("Connected to %s", self.address)
                     return self._client
 
+                except asyncio.TimeoutError:
+                    last_error = TimeoutError(
+                        f"Connection timed out after {CONNECTION_TIMEOUT}s"
+                    )
+                    _LOGGER.warning(
+                        "Connection to %s timed out (attempt %d/%d) - device may be in use by another app",
+                        self.address,
+                        attempt + 1,
+                        CONNECTION_MAX_ATTEMPTS,
+                    )
+
                 except BleakError as err:
                     last_error = err
                     _LOGGER.debug("Connection attempt %d failed: %s", attempt + 1, err)
 
+                # Delay before retry
+                if attempt < CONNECTION_MAX_ATTEMPTS - 1:
                     if self._connect_delay == 0:
                         self._connect_delay = 1.0
                     else:
                         self._connect_delay = min(
                             self._connect_delay * 2, CONNECTION_MAX_DELAY
                         )
-
-                    if attempt < CONNECTION_MAX_ATTEMPTS - 1:
-                        await asyncio.sleep(self._connect_delay)
+                    await asyncio.sleep(self._connect_delay)
 
             _LOGGER.warning(
-                "Failed to connect to %s after %d attempts: %s (device may be in use by another app)",
+                "Failed to connect to %s after %d attempts: %s",
                 self.address,
                 CONNECTION_MAX_ATTEMPTS,
                 last_error,
             )
             raise HomeAssistantError(
-                f"Cannot connect to device (may be in use by another app): {last_error}"
+                f"Cannot connect to device - may be in use by another app: {last_error}"
             )
 
     async def _disconnect(self) -> None:

@@ -19,8 +19,9 @@ DEFAULT_SCAN_INTERVAL = 30  # seconds
 
 # Connection management
 CONNECTION_IDLE_TIMEOUT = 120  # seconds - disconnect after this much idle time
-CONNECTION_MAX_ATTEMPTS = 3  # Maximum connection retry attempts
-CONNECTION_MAX_DELAY = 6.0  # Maximum retry delay in seconds
+CONNECTION_TIMEOUT = 8.0  # seconds - timeout for each connection attempt
+CONNECTION_MAX_ATTEMPTS = 2  # Maximum connection retry attempts (fail fast)
+CONNECTION_MAX_DELAY = 2.0  # Maximum retry delay in seconds
 CONNECTION_DELAY_REDUCTION = 0.75  # Multiply delay by this on success
 COMMAND_DELAY = 0.2  # seconds between commands
 
