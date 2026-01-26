@@ -17,21 +17,21 @@
 - Ensure that a commit is made any time a version number is updated
 - Prompt me to accept changes and make a commit when appropriate
 - This project is being done in a git repo that will be synced with GitHub.  Here are Git Commit instructions:
-- All files should be included if not excluded by .gitignore
-- Any database files should be excluded in .gitignore
-- Any .env files should be excluded in .gitignore
-- There should be two standard branches. Main and Development. Initial version should go into Main, then subsequent work goes into the development branch until the development branch is promoted to Main.
-- All secrets, API keys, etc. should be stored in .env, all configuration options should be included in a config.yaml file
-- Pre compile all python code to check for syntax errors
-- This project will always maintain a current release
+  - All files should be included if not excluded by .gitignore
+  - Any database files should be excluded in .gitignore
+  - Any .env files should be excluded in .gitignore
+  - All secrets, API keys, etc. should be stored in .env, all configuration options should be included in a config.yaml file
+  - Pre compile all python code to check for syntax errors
+  - This project will always maintain a current release
 
 ## Development and Release Workflow
 - **All future development work must be done on the `development` branch**
 - When ready to release from development:
-  1. Create an **experimental pre-release** from the development branch
-  2. Use version format: `x.y.z-beta.n` (e.g., `0.4.0-beta.1`) for experimental releases
-  3. The experimental release must be installable via HACS
-  4. Tag experimental releases with `pre-release` flag on GitHub
+  1. There should be two standard branches. Main and Development. Initial version should go into Main, then subsequent work goes into the development branch until the development branch is promoted to Main.
+  2. Create an **experimental pre-release** from the development branch
+  3. Use version format: `x.y.z-beta.n` (e.g., `0.4.0-beta.1`) for experimental releases
+  4. The experimental release must be installable via HACS
+  5. Tag experimental releases with `pre-release` flag on GitHub
 - After user confirms the experimental release works:
   1. Merge development branch into main
   2. Create a normal release from main with standard version (e.g., `0.4.0`)
@@ -55,4 +55,3 @@
 ## Project Specific Instructions
 - This project if for an integration in Home Assistant (HA).  
 - The HA integration will use HACS to install it from a github repo.
-- This project is based on work done using ESPHome rather than a HA integration.  The original ESPHome sample code and the README file for it is contained in the Original_Starting_Point FolderS
