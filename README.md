@@ -6,10 +6,11 @@
 
 A Home Assistant custom integration for the **Homedics SereneScent Aromatherapy Diffuser** (Model ARMH-973).
 
-This integration communicates with the diffuser over Bluetooth Low Energy (BLE) using a reverse-engineered protocol, allowing full local control without cloud connectivity.
+> **100% Local Control** - This integration communicates directly with the diffuser over Bluetooth Low Energy (BLE). No cloud services, no internet connection required, no data leaves your home.
 
 ## Features
 
+- **100% Local** - Direct Bluetooth communication, no cloud or internet required
 - **Power Control** - Turn the diffuser on/off
 - **Intensity Control** - Set mist intensity (Low, Medium, High)
 - **Light Control** - Color wheel interface that maps to closest device color (White, Red, Blue, Violet, Green, Orange) plus rotating effect
