@@ -5,6 +5,7 @@ Provides power on/off and intensity control (low/medium/high) as fan speed prese
 
 from __future__ import annotations
 
+import math
 import logging
 from typing import Any
 
@@ -13,6 +14,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util.percentage import (
+    percentage_to_ranged_value,
+    ranged_value_to_percentage,
+)
 
 from .const import DOMAIN
 from .coordinator import HomedicsSereneScentCoordinator
@@ -21,6 +26,13 @@ _LOGGER = logging.getLogger(__name__)
 
 # Map preset modes to intensity values
 PRESET_MODES = ["low", "medium", "high"]
+
+# Speed range for percentage calculation (1=low, 2=medium, 3=high)
+SPEED_RANGE = (1, 3)
+
+# Map intensity names to speed values
+INTENSITY_TO_SPEED = {"low": 1, "medium": 2, "high": 3}
+SPEED_TO_INTENSITY = {1: "low", 2: "medium", 3: "high"}
 
 
 async def async_setup_entry(
@@ -49,10 +61,12 @@ class HomedicsSereneScentFan(
     _attr_icon = "mdi:air-humidifier"
     _attr_supported_features = (
         FanEntityFeature.PRESET_MODE
+        | FanEntityFeature.SET_SPEED
         | FanEntityFeature.TURN_ON
         | FanEntityFeature.TURN_OFF
     )
     _attr_preset_modes = PRESET_MODES
+    _attr_speed_count = 3
 
     def __init__(self, coordinator: HomedicsSereneScentCoordinator) -> None:
         """Initialize the fan entity."""
@@ -78,6 +92,15 @@ class HomedicsSereneScentFan(
         """Return the current preset mode (intensity level)."""
         return self.coordinator.intensity if self.is_on else None
 
+    @property
+    def percentage(self) -> int | None:
+        """Return the current speed as a percentage."""
+        if not self.is_on:
+            return 0
+        intensity = self.coordinator.intensity
+        speed = INTENSITY_TO_SPEED.get(intensity, 1)
+        return ranged_value_to_percentage(SPEED_RANGE, speed)
+
     async def async_turn_on(
         self,
         percentage: int | None = None,
@@ -87,8 +110,13 @@ class HomedicsSereneScentFan(
         """Turn on the diffuser."""
         await self.coordinator.async_set_power(True)
 
+        # If percentage specified, convert to intensity
+        if percentage is not None and percentage > 0:
+            speed = math.ceil(percentage_to_ranged_value(SPEED_RANGE, percentage))
+            intensity = SPEED_TO_INTENSITY.get(speed, "low")
+            await self.coordinator.async_set_intensity(intensity)
         # If preset_mode specified, set it
-        if preset_mode and preset_mode in PRESET_MODES:
+        elif preset_mode and preset_mode in PRESET_MODES:
             await self.coordinator.async_set_intensity(preset_mode)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -106,3 +134,19 @@ class HomedicsSereneScentFan(
             await self.coordinator.async_set_power(True)
 
         await self.coordinator.async_set_intensity(preset_mode)
+
+    async def async_set_percentage(self, percentage: int) -> None:
+        """Set the speed percentage."""
+        if percentage == 0:
+            await self.coordinator.async_set_power(False)
+            return
+
+        # Convert percentage to intensity level
+        speed = math.ceil(percentage_to_ranged_value(SPEED_RANGE, percentage))
+        intensity = SPEED_TO_INTENSITY.get(speed, "low")
+
+        # Turn on if not already on
+        if not self.is_on:
+            await self.coordinator.async_set_power(True)
+
+        await self.coordinator.async_set_intensity(intensity)
