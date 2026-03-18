@@ -42,7 +42,6 @@ from .const import (
     CONNECTION_IDLE_TIMEOUT,
     CONNECTION_MAX_ATTEMPTS,
     CONNECTION_MAX_DELAY,
-    CONNECTION_TIMEOUT,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     INTENSITY_COMMANDS,
@@ -160,17 +159,17 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for attempt in range(CONNECTION_MAX_ATTEMPTS):
                 try:
                     _LOGGER.debug(
-                        "Connecting to %s (attempt %d/%d, timeout=%ds)",
+                        "Connecting to %s (attempt %d/%d)",
                         self.address,
                         attempt + 1,
                         CONNECTION_MAX_ATTEMPTS,
-                        int(CONNECTION_TIMEOUT),
                     )
 
-                    # Wrap connection with timeout to fail fast if device is busy
-                    self._client = await asyncio.wait_for(
-                        establish_connection(BleakClient, ble_device, self.address),
-                        timeout=CONNECTION_TIMEOUT,
+                    self._client = await establish_connection(
+                        BleakClient,
+                        ble_device,
+                        self.address,
+                        disconnected_callback=self._handle_disconnect,
                     )
 
                     # Subscribe to notifications
@@ -191,17 +190,6 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                     _LOGGER.debug("Connected to %s", self.address)
                     return self._client
-
-                except asyncio.TimeoutError:
-                    last_error = TimeoutError(
-                        f"Connection timed out after {CONNECTION_TIMEOUT}s"
-                    )
-                    _LOGGER.warning(
-                        "Connection to %s timed out (attempt %d/%d) - device may be in use by another app",
-                        self.address,
-                        attempt + 1,
-                        CONNECTION_MAX_ATTEMPTS,
-                    )
 
                 except BleakError as err:
                     last_error = err
@@ -227,20 +215,25 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 f"Cannot connect to device - may be in use by another app: {last_error}"
             )
 
+    def _handle_disconnect(self, client: BleakClient) -> None:
+        """Handle unexpected disconnection from device."""
+        _LOGGER.debug("Device %s disconnected unexpectedly", self.address)
+        self._client = None
+
     async def _disconnect(self) -> None:
         """Disconnect from device."""
         async with self._connection_lock:
-            if self._client and self._client.is_connected:
+            client = self._client
+            self._client = None
+            if client and client.is_connected:
                 try:
-                    await self._client.stop_notify(CHAR_RX_UUID)
+                    await client.stop_notify(CHAR_RX_UUID)
                 except BleakError:
                     pass
                 try:
-                    await self._client.disconnect()
+                    await client.disconnect()
                 except BleakError as err:
                     _LOGGER.debug("Error disconnecting: %s", err)
-                finally:
-                    self._client = None
 
     def _notification_handler(self, sender: int, data: bytes) -> None:
         """Handle BLE notifications from device."""
