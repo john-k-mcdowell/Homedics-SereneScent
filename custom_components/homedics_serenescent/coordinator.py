@@ -23,6 +23,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import (
     CHAR_RX_UUID,
     CHAR_TX_UUID,
+    CMD_COLOR_OFF,
     CMD_MODE_HOME,
     CMD_MODE_SCHEDULE,
     CMD_POWER_OFF,
@@ -325,6 +326,10 @@ class HomedicsSereneScentCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             cmd = CMD_POWER_ON if on else CMD_POWER_OFF
             await self._send_command(cmd)
+
+            # Turn light off immediately on power-on; light-on must be an explicit action
+            if on:
+                await self._send_command(CMD_COLOR_OFF, wait_response=False)
 
             # Request status to confirm
             status_ok = await self.async_request_status()
